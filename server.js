@@ -9,6 +9,7 @@ const gdrive = require('./gdrive');
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(cors());
+app.use(express.static(path.join(__dirname)));
 
 const PORT = process.env.PORT || 5000;
 const DB_FILE = path.join(__dirname, 'db.json');
@@ -458,6 +459,12 @@ app.put('/api/notifications/read/:userId', (req, res) => {
     });
     triggerRealtimeSync('notifications');
     res.json({ success: true });
+});
+
+// Root / HTML Catch-all Route
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next();
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // ─── START SERVER ────────────────────────────────────────────────────────────
