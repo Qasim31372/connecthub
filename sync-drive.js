@@ -1,55 +1,40 @@
 /**
- * ConnectHub - Standalone Google Drive Backup Script
+ * ConnectHub - Standalone Google Drive Backup Script (No MongoDB)
  * Run with: node sync-drive.js OR npm run sync-drive
  */
 
 require('dotenv').config();
-const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
 const gdrive = require('./gdrive');
 
-const MONGODB_URI = process.env.MONGODB_URI;
-
-// Define Schemas to access collections directly
-const User = mongoose.models.User || mongoose.model('User', new mongoose.Schema({}, { strict: false }));
-const Post = mongoose.models.Post || mongoose.model('Post', new mongoose.Schema({}, { strict: false }));
-const Story = mongoose.models.Story || mongoose.model('Story', new mongoose.Schema({}, { strict: false }));
-const Reel = mongoose.models.Reel || mongoose.model('Reel', new mongoose.Schema({}, { strict: false }));
-const Message = mongoose.models.Message || mongoose.model('Message', new mongoose.Schema({}, { strict: false }));
-const Notification = mongoose.models.Notification || mongoose.model('Notification', new mongoose.Schema({}, { strict: false }));
+const DB_FILE = path.join(__dirname, 'db.json');
 
 async function runBackup() {
     console.log('🚀 [Google Drive Backup Script] Initializing...');
 
-    if (!MONGODB_URI) {
-        console.error('❌ MONGODB_URI is missing in .env file!');
-        process.exit(1);
-    }
+    let dbData = {};
 
     try {
-        await mongoose.connect(MONGODB_URI);
-        console.log('✅ Connected to MongoDB.');
+        if (fs.existsSync(DB_FILE)) {
+            const fileData = fs.readFileSync(DB_FILE, 'utf-8');
+            dbData = JSON.parse(fileData);
+            console.log('📁 Loaded local database from db.json');
+        } else {
+            console.log('⚠️ db.json not found locally. Running initial setup sync...');
+            dbData = { users: [], posts: [], stories: [], reels: [], messages: [], notifications: [] };
+        }
 
         gdrive.initGoogleDrive();
 
-        const [users, posts, stories, reels, messages, notifications] = await Promise.all([
-            User.find().lean(),
-            Post.find().lean(),
-            Story.find().lean(),
-            Reel.find().lean(),
-            Message.find().lean(),
-            Notification.find().lean()
-        ]);
-
-        console.log(`📊 Fetched Data: ${users.length} users, ${posts.length} posts, ${stories.length} stories, ${reels.length} reels, ${messages.length} messages, ${notifications.length} notifications.`);
-
         console.log('⏳ Uploading / Syncing full backup to Google Drive...');
         const result = await gdrive.syncAllData({
-            users,
-            posts,
-            stories,
-            reels,
-            messages,
-            notifications
+            users: dbData.users || [],
+            posts: dbData.posts || [],
+            stories: dbData.stories || [],
+            reels: dbData.reels || [],
+            messages: dbData.messages || [],
+            notifications: dbData.notifications || []
         });
 
         console.log('----------------------------------------------------');
@@ -57,8 +42,6 @@ async function runBackup() {
         console.log('📋 Current Status:', JSON.stringify(gdrive.getSyncStatus(), null, 2));
         console.log('----------------------------------------------------');
 
-        await mongoose.disconnect();
-        console.log('👋 Disconnected from MongoDB. Script finished successfully.');
         process.exit(0);
     } catch (err) {
         console.error('❌ Backup script error:', err.message);
