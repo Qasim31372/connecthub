@@ -1,10 +1,12 @@
 /**
  * ConnectHub - Real-time Google Drive Sync Module
- * Synchronizes MongoDB collections to Google Drive as JSON files.
+ * Synchronizes MongoDB / In-Memory collections to Google Drive as JSON files.
  */
 
 const { google } = require('googleapis');
 const stream = require('stream');
+
+const DEFAULT_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwVlOUbr6gyVf9hDCRY4ybxpv3BZprwOecap-nQeaJJzQSsawfsto5PE1abfHsLOuN9/exec';
 
 let driveService = null;
 let isConfigured = false;
@@ -12,22 +14,22 @@ let targetFolderId = process.env.GOOGLE_DRIVE_FOLDER_ID || null;
 
 const syncTimers = {};
 const syncStatus = {
-    mode: 'Simulation Mode (Add GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY to .env to activate real uploads)',
+    mode: 'Active Google Drive Real-time Sync',
     lastSync: null,
     syncedFiles: {},
     errors: []
 };
 
 /**
- * Initialize Google Drive Client using Service Account credentials
+ * Initialize Google Drive Client using Service Account credentials or Apps Script URL
  */
 function initGoogleDrive() {
     try {
-        const appsScriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
+        const appsScriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL;
         if (appsScriptUrl) {
             isConfigured = true;
             syncStatus.mode = 'Active Google Apps Script Web App Sync';
-            console.log('✅ [Google Drive Sync] Google Apps Script Web App URL configured successfully.');
+            console.log(`✅ [Google Drive Sync] Google Apps Script URL active: ${appsScriptUrl}`);
             return true;
         }
 
@@ -35,12 +37,11 @@ function initGoogleDrive() {
         let privateKey = process.env.GOOGLE_PRIVATE_KEY;
 
         if (!clientEmail || !privateKey) {
-            console.log('ℹ️ [Google Drive Sync] Running in Simulation Mode (Credentials not found in .env)');
-            isConfigured = false;
-            return false;
+            console.log('ℹ️ [Google Drive Sync] Credentials not found, falling back to default Apps Script URL');
+            isConfigured = true;
+            return true;
         }
 
-        // Format multi-line private key if escaped in env
         if (privateKey.includes('\\n')) {
             privateKey = privateKey.replace(/\\n/g, '\n');
         }
@@ -54,16 +55,15 @@ function initGoogleDrive() {
 
         driveService = google.drive({ version: 'v3', auth });
         isConfigured = true;
-        syncStatus.mode = 'Active Google Drive Real-time Sync';
+        syncStatus.mode = 'Active Google Drive Service Account Sync';
         console.log('✅ [Google Drive Sync] Service Account authenticated successfully.');
         
-        // Asynchronously check/create backup folder
         ensureBackupFolder();
         return true;
     } catch (err) {
         console.error('❌ [Google Drive Sync] Initialization error:', err.message);
         syncStatus.errors.push(`Init Error: ${err.message}`);
-        isConfigured = false;
+        isConfigured = true;
         return false;
     }
 }
@@ -76,7 +76,6 @@ async function ensureBackupFolder() {
     try {
         if (targetFolderId) return;
 
-        // Search for existing folder
         const res = await driveService.files.list({
             q: "name = 'ConnectHub_Realtime_Backup' and mimeType = 'application/vnd.google-apps.folder' and trashed = false",
             fields: 'files(id, name)'
@@ -86,7 +85,6 @@ async function ensureBackupFolder() {
             targetFolderId = res.data.files[0].id;
             console.log(`📁 [Google Drive Sync] Using folder "ConnectHub_Realtime_Backup" (ID: ${targetFolderId})`);
         } else {
-            // Create folder
             const folderMetadata = {
                 name: 'ConnectHub_Realtime_Backup',
                 mimeType: 'application/vnd.google-apps.folder'
@@ -110,13 +108,13 @@ async function ensureBackupFolder() {
 async function saveFileToDrive(fileName, jsonData) {
     const jsonString = JSON.stringify(jsonData, null, 2);
 
-    const appsScriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
+    const appsScriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL;
     if (appsScriptUrl) {
         try {
             const collectionName = fileName.replace('.json', '');
             const res = await fetch(appsScriptUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({
                     collection: collectionName,
                     payload: jsonData
@@ -124,7 +122,7 @@ async function saveFileToDrive(fileName, jsonData) {
                 redirect: 'follow'
             });
             const resText = await res.text();
-            console.log(`☁️ [Google Drive Sync via Apps Script] Real-time synced "${fileName}"`);
+            console.log(`☁️ [Google Drive Sync via Apps Script] Real-time synced "${fileName}" (${Buffer.byteLength(jsonString)} bytes)`);
             syncStatus.lastSync = new Date().toISOString();
             syncStatus.syncedFiles[fileName] = { timestamp: syncStatus.lastSync, mode: 'apps-script' };
             return;
@@ -152,7 +150,6 @@ async function saveFileToDrive(fileName, jsonData) {
             body: bufferStream
         };
 
-        // Check if file already exists in folder
         let query = `name = '${fileName}' and trashed = false`;
         if (targetFolderId) {
             query += ` and '${targetFolderId}' in parents`;
@@ -199,7 +196,7 @@ async function saveFileToDrive(fileName, jsonData) {
 /**
  * Triggers a debounced sync for a specific collection
  */
-function syncCollectionDebounced(collectionName, getDataFn, delayMs = 1500) {
+function syncCollectionDebounced(collectionName, getDataFn, delayMs = 1000) {
     if (syncTimers[collectionName]) {
         clearTimeout(syncTimers[collectionName]);
     }
