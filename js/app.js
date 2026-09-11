@@ -187,6 +187,20 @@ const app = (() => {
         document.querySelectorAll('.menu-item').forEach(m => {
             if (m.textContent.trim().toLowerCase().startsWith(page)) m.classList.add('active');
         });
+
+        document.querySelectorAll('.mobile-nav-item').forEach(m => {
+            m.classList.remove('active');
+            const txt = m.textContent.trim().toLowerCase();
+            if ((page === 'feed' && txt.includes('feed')) ||
+                (page === 'explore' && txt.includes('explore')) ||
+                (page === 'reels' && txt.includes('reels')) ||
+                (page === 'messages' && (txt.includes('chats') || txt.includes('message'))) ||
+                (page === 'profile' && txt.includes('profile'))) {
+                m.classList.add('active');
+            }
+        });
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // ─── FEED PAGE ───────────────────────────────────────────────────────────────
