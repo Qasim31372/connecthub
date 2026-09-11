@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConnectHub • The Social Sphere</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- AUTHENTICATION -->
+    <div id="authContainer">
+        <div class="auth-card">
+            <div class="auth-logo">ConnectHub</div>
+            
+            <div id="loginForm" class="auth-form">
+                <input type="text" id="loginUsername" placeholder="Username">
+                <input type="password" id="loginPassword" placeholder="Password">
+                <button class="btn-primary" onclick="app.login()">Sign In</button>
+                <div class="auth-switch">
+                    Don't have an account? <span onclick="app.toggleAuthForm()">Join the Sphere</span>
+                </div>
+            </div>
+
+            <div id="registerForm" class="auth-form" style="display: none;">
+                <input type="text" id="regName" placeholder="Full Name">
+                <input type="email" id="regEmail" placeholder="Email Address">
+                <input type="text" id="regUsername" placeholder="Username">
+                <input type="password" id="regPassword" placeholder="Password">
+                <button class="btn-primary" onclick="app.register()">Create Account</button>
+                <div class="auth-switch">
+                    Already in the sphere? <span onclick="app.toggleAuthForm()">Sign In</span>
+                </div>
+            </div>
+
+            <div id="otpForm" class="auth-form" style="display: none;">
+                <h3 style="margin-bottom: 1rem; color: var(--text-main); text-align: center;">Verify Email</h3>
+                <p style="margin-bottom: 1rem; font-size: 0.9rem; color: var(--text-secondary); text-align: center;">Enter the 6-digit code sent to your email.</p>
+                <input type="text" id="otpInput" placeholder="123456" maxlength="6" style="text-align: center; letter-spacing: 5px; font-size: 1.2rem; font-weight: bold;">
+                <button class="btn-primary" onclick="app.verifyOtp()">Verify & Login</button>
+                <div class="auth-switch">
+                    <span onclick="app.cancelOtp()">Go back to Sign In</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP APPLICATION -->
+    <div id="appContainer">
+        <nav class="navbar">
+            <div class="nav-left">
+                <div class="logo" onclick="app.switchPage('feed')">ConnectHub</div>
+            </div>
+            
+            <div class="nav-center">
+                <div class="search-container">
+                    <input type="text" placeholder="Search for people, posts, or trends...">
+                </div>
+            </div>
+            
+            <div class="nav-right">
+                <i class="fa-solid fa-house nav-icon active" onclick="app.switchPage('feed')"></i>
+                <i class="fa-solid fa-compass nav-icon" onclick="app.switchPage('explore')"></i>
+                <i class="fa-solid fa-clapperboard nav-icon" onclick="app.switchPage('reels')"></i>
+                <i class="fa-solid fa-bell nav-icon" onclick="app.switchPage('notifications')"></i>
+                <i class="fa-solid fa-circle-half-stroke nav-icon" onclick="app.toggleTheme()"></i>
+                <div class="user-avatar" id="navAvatar" onclick="app.switchPage('profile')" style="cursor: pointer; width: 35px; height: 35px; font-size: 0.8rem;"></div>
+            </div>
+        </nav>
+
+        <main class="main-layout">
+            <!-- Sidebar Left -->
+            <aside class="sidebar-left">
+                <div class="menu-item active" onclick="app.switchPage('feed')">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Feed</span>
+                </div>
+                <div class="menu-item" onclick="app.switchPage('explore')">
+                    <i class="fa-solid fa-compass"></i>
+                    <span>Explore</span>
+                </div>
+                <div class="menu-item" onclick="app.switchPage('reels')">
+                    <i class="fa-solid fa-video"></i>
+                    <span>Reels</span>
+                </div>
+                <div class="menu-item" onclick="app.switchPage('messages')">
+                    <i class="fa-solid fa-message"></i>
+                    <span>Messages</span>
+                </div>
+                <div class="menu-item" onclick="app.switchPage('profile')">
+                    <i class="fa-solid fa-user"></i>
+                    <span>Profile</span>
+                </div>
+               
+                <div class="menu-item" onclick="app.logout()">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span>Logout</span>
+                </div>
+            </aside>
+
+            <!-- Center Content -->
+            <section class="feed-container">
+                <!-- Stories -->
+                <div class="stories-strip" id="storiesContainer"></div>
+
+                <!-- Create Post -->
+                <div class="create-post">
+                    <div class="create-post-top">
+                        <div class="user-avatar" id="createAvatar"></div>
+                        <textarea id="postText" placeholder="Share something with the sphere..."></textarea>
+                    </div>
+                    <div id="postPreview" style="margin-bottom: 1rem; position: relative; display: none;">
+                        <img src="" id="postPreviewImg" style="width: 100%; border-radius: 1rem;">
+                        <button onclick="app.clearPostPreview()" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; padding: 5px 10px; border-radius: 50%; cursor: pointer;">×</button>
+                    </div>
+                    <div class="create-post-bottom">
+                        <div class="post-options">
+                            <div class="post-option" onclick="app.triggerImageUpload()">
+                                <i class="fa-solid fa-image" style="color: #10b981;"></i>
+                                <span>Media</span>
+                            </div>
+                            <div class="post-option" onclick="app.triggerReelUpload()">
+                                <i class="fa-solid fa-video" style="color: #818cf8;"></i>
+                                <span>Reel</span>
+                            </div>
+                        </div>
+                        <button class="btn-post" onclick="app.createPost()">Publish</button>
+                    </div>
+                    <input type="file" id="imageUpload" style="display: none;" accept="image/*" onchange="app.handleImageSelect(event)">
+                </div>
+
+                <!-- Posts List -->
+                <div id="postsList"></div>
+            </section>
+
+            <!-- Sidebar Right -->
+            <aside class="sidebar-right">
+                <div class="widget">
+                    <h3 class="widget-title">Connect with People</h3>
+                    <div id="recommendationsList"></div>
+                </div>
+
+                <div class="widget">
+                    <h3 class="widget-title">Conversations</h3>
+                    <div id="contactsList"></div>
+                </div>
+            </aside>
+        </main>
+    </div>
+
+    <!-- Chat Dock -->
+    <div class="chat-dock" id="chatDock"></div>
+
+    <!-- Scripts -->
+    <script src="js/db.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
