@@ -1,0 +1,154 @@
+{
+  "users": [
+    {
+      "_id": "u1",
+      "id": "u1",
+      "username": "alex_nexus",
+      "email": "alex@example.com",
+      "name": "Alex Rivera",
+      "avatar": "AR",
+      "bio": "Creative Explorer | Tech Enthusiast 🚀",
+      "followers": 1250,
+      "following": 450,
+      "password": "123",
+      "theme": "dark",
+      "savedPosts": [],
+      "followingList": []
+    },
+    {
+      "_id": "u2",
+      "id": "u2",
+      "username": "sophia_codes",
+      "email": "sophia@example.com",
+      "name": "Sophia Chen",
+      "avatar": "SC",
+      "bio": "Building the next gen web 💻",
+      "followers": 8900,
+      "following": 120,
+      "password": "123",
+      "theme": "dark",
+      "savedPosts": [],
+      "followingList": []
+    },
+    {
+      "_id": "u3",
+      "id": "u3",
+      "username": "marcus_v",
+      "email": "marcus@example.com",
+      "name": "Marcus Vance",
+      "avatar": "MV",
+      "bio": "Visual Storyteller 📸",
+      "followers": 3200,
+      "following": 800,
+      "password": "123",
+      "theme": "dark",
+      "savedPosts": [],
+      "followingList": []
+    }
+  ],
+  "pendingUsers": [],
+  "posts": [
+    {
+      "_id": "p1",
+      "id": "p1",
+      "userId": "u2",
+      "content": "Just launched the new ultra-responsive UI for ConnectHub! What do you think? 💎",
+      "image": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1200&q=80",
+      "likes": [
+        "u1",
+        "u3"
+      ],
+      "comments": [
+        {
+          "userId": "u1",
+          "text": "This looks incredible! The glassmorphism is spot on.",
+          "timestamp": 1726040000000
+        }
+      ],
+      "timestamp": 1726043600000
+    },
+    {
+      "_id": "p2",
+      "id": "p2",
+      "userId": "u3",
+      "content": "Morning trek in the mountains. The light was perfect. 🏔️",
+      "image": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1200&q=80",
+      "likes": [
+        "u2"
+      ],
+      "comments": [],
+      "timestamp": 1726036400000
+    }
+  ],
+  "stories": [
+    {
+      "_id": "s1",
+      "id": "s1",
+      "userId": "u2",
+      "image": "https://images.unsplash.com/photo-1517433447755-d14dcb3298c0?auto=format&fit=crop&w=300&q=80",
+      "timestamp": 1726045000000
+    },
+    {
+      "_id": "s2",
+      "id": "s2",
+      "userId": "u3",
+      "image": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=300&q=80",
+      "timestamp": 1726045000000
+    },
+    {
+      "_id": "s3",
+      "id": "s3",
+      "userId": "u1",
+      "image": "https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=300&q=80",
+      "timestamp": 1726045000000
+    }
+  ],
+  "reels": [
+    {
+      "_id": "r1",
+      "id": "r1",
+      "userId": "u1",
+      "caption": "Checking out the vibrant night life! 🌟 #nightlife #vibes",
+      "video": "https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-sign-in-urban-street-40098-large.mp4",
+      "likes": [
+        "u2",
+        "u3"
+      ],
+      "comments": [
+        {
+          "userId": "u2",
+          "text": "Loving the aesthetic!",
+          "timestamp": 1726045000000
+        }
+      ],
+      "timestamp": 1726045000000
+    },
+    {
+      "_id": "r2",
+      "id": "r2",
+      "userId": "u2",
+      "caption": "Nature is so therapeutic 🌿🌞 #peaceful #naturewalk",
+      "video": "https://assets.mixkit.co/videos/preview/mixkit-forest-stream-in-the-sunlight-529-large.mp4",
+      "likes": [
+        "u1"
+      ],
+      "comments": [],
+      "timestamp": 1726045000000
+    },
+    {
+      "_id": "r3",
+      "id": "r3",
+      "userId": "u3",
+      "caption": "Lost in the rhythm 🎶🕺 #dancelife #neon",
+      "video": "https://assets.mixkit.co/videos/preview/mixkit-man-dancing-under-neon-lights-40099-large.mp4",
+      "likes": [
+        "u1",
+        "u2"
+      ],
+      "comments": [],
+      "timestamp": 1726045000000
+    }
+  ],
+  "messages": [],
+  "notifications": []
+}

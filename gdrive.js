@@ -219,6 +219,7 @@ async function syncAllData(allDataFetcher) {
         const data = typeof allDataFetcher === 'function' ? await allDataFetcher() : allDataFetcher;
         for (const [key, value] of Object.entries(data)) {
             await saveFileToDrive(`${key}.json`, value);
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
         await saveFileToDrive('full_backup.json', {
             syncedAt: new Date().toISOString(),
