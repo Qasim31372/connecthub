@@ -113,20 +113,24 @@ function generateId() {
     return 'id_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
 }
 
-// Real-time Google Drive Sync Helper
-function triggerRealtimeSync(collectionName) {
+// Real-time Google Drive Sync Helper (Awaited for instant serverless execution)
+async function triggerRealtimeSync(collectionName) {
     saveLocalDB();
-    if (collectionName && db[collectionName]) {
-        gdrive.syncCollectionDebounced(collectionName, db[collectionName]);
-    } else {
-        gdrive.syncAllData({
-            users: db.users,
-            posts: db.posts,
-            stories: db.stories,
-            reels: db.reels,
-            messages: db.messages,
-            notifications: db.notifications
-        });
+    try {
+        if (collectionName && db[collectionName]) {
+            await gdrive.saveFileToDrive(`${collectionName}.json`, db[collectionName]);
+        } else {
+            await gdrive.syncAllData({
+                users: db.users,
+                posts: db.posts,
+                stories: db.stories,
+                reels: db.reels,
+                messages: db.messages,
+                notifications: db.notifications
+            });
+        }
+    } catch (err) {
+        console.error('Real-time sync error:', err.message);
     }
 }
 
@@ -204,7 +208,7 @@ app.post('/api/register', async (req, res) => {
     }
 });
 
-app.post('/api/verify-otp', (req, res) => {
+app.post('/api/verify-otp', async (req, res) => {
     try {
         const { email, otp } = req.body;
         const pendingUser = db.pendingUsers.find(p => p.email === email);
@@ -232,7 +236,7 @@ app.post('/api/verify-otp', (req, res) => {
         db.users.push(newUser);
         db.pendingUsers = db.pendingUsers.filter(p => p.email !== email);
 
-        triggerRealtimeSync('users');
+        await triggerRealtimeSync('users');
         res.json(newUser);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -250,16 +254,16 @@ app.get('/api/users/:id', (req, res) => {
     res.json(user);
 });
 
-app.put('/api/users/:id', (req, res) => {
+app.put('/api/users/:id', async (req, res) => {
     const index = db.users.findIndex(u => u._id === req.params.id || u.id === req.params.id);
     if (index === -1) return res.status(404).json({ error: 'User not found' });
 
     db.users[index] = { ...db.users[index], ...req.body };
-    triggerRealtimeSync('users');
+    await triggerRealtimeSync('users');
     res.json(db.users[index]);
 });
 
-app.post('/api/users/:id/follow', (req, res) => {
+app.post('/api/users/:id/follow', async (req, res) => {
     try {
         const { currentUserId } = req.body;
         const userToFollow = db.users.find(u => u._id === req.params.id || u.id === req.params.id);
@@ -287,7 +291,7 @@ app.post('/api/users/:id/follow', (req, res) => {
             followed = false;
         }
 
-        triggerRealtimeSync('users');
+        await triggerRealtimeSync('users');
         res.json({ followed, currentUser, userToFollow });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -300,7 +304,7 @@ app.get('/api/posts', (req, res) => {
     res.json(sortedPosts);
 });
 
-app.post('/api/posts', (req, res) => {
+app.post('/api/posts', async (req, res) => {
     const newId = generateId();
     const newPost = {
         _id: newId,
@@ -311,17 +315,17 @@ app.post('/api/posts', (req, res) => {
         ...req.body
     };
     db.posts.unshift(newPost);
-    triggerRealtimeSync('posts');
+    await triggerRealtimeSync('posts');
     res.json(newPost);
 });
 
-app.delete('/api/posts/:id', (req, res) => {
+app.delete('/api/posts/:id', async (req, res) => {
     db.posts = db.posts.filter(p => p._id !== req.params.id && p.id !== req.params.id);
-    triggerRealtimeSync('posts');
+    await triggerRealtimeSync('posts');
     res.json({ success: true });
 });
 
-app.post('/api/posts/:id/like', (req, res) => {
+app.post('/api/posts/:id/like', async (req, res) => {
     const { userId } = req.body;
     const post = db.posts.find(p => p._id === req.params.id || p.id === req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found' });
@@ -331,11 +335,11 @@ app.post('/api/posts/:id/like', (req, res) => {
     if (index === -1) post.likes.push(userId);
     else post.likes.splice(index, 1);
 
-    triggerRealtimeSync('posts');
+    await triggerRealtimeSync('posts');
     res.json(post);
 });
 
-app.post('/api/posts/:id/comment', (req, res) => {
+app.post('/api/posts/:id/comment', async (req, res) => {
     const post = db.posts.find(p => p._id === req.params.id || p.id === req.params.id);
     if (!post) return res.status(404).json({ error: 'Post not found' });
 
@@ -343,7 +347,7 @@ app.post('/api/posts/:id/comment', (req, res) => {
     const comment = { ...req.body, timestamp: Date.now() };
     post.comments.push(comment);
 
-    triggerRealtimeSync('posts');
+    await triggerRealtimeSync('posts');
     res.json(post);
 });
 
@@ -353,7 +357,7 @@ app.get('/api/stories', (req, res) => {
     res.json(sortedStories);
 });
 
-app.post('/api/stories', (req, res) => {
+app.post('/api/stories', async (req, res) => {
     const newId = generateId();
     const story = {
         _id: newId,
@@ -362,7 +366,7 @@ app.post('/api/stories', (req, res) => {
         ...req.body
     };
     db.stories.unshift(story);
-    triggerRealtimeSync('stories');
+    await triggerRealtimeSync('stories');
     res.json(story);
 });
 
@@ -372,7 +376,7 @@ app.get('/api/reels', (req, res) => {
     res.json(sortedReels);
 });
 
-app.post('/api/reels', (req, res) => {
+app.post('/api/reels', async (req, res) => {
     const newId = generateId();
     const reel = {
         _id: newId,
@@ -383,11 +387,11 @@ app.post('/api/reels', (req, res) => {
         ...req.body
     };
     db.reels.unshift(reel);
-    triggerRealtimeSync('reels');
+    await triggerRealtimeSync('reels');
     res.json(reel);
 });
 
-app.post('/api/reels/:id/like', (req, res) => {
+app.post('/api/reels/:id/like', async (req, res) => {
     const { userId } = req.body;
     const reel = db.reels.find(r => r._id === req.params.id || r.id === req.params.id);
     if (!reel) return res.status(404).json({ error: 'Reel not found' });
@@ -397,18 +401,18 @@ app.post('/api/reels/:id/like', (req, res) => {
     if (index === -1) reel.likes.push(userId);
     else reel.likes.splice(index, 1);
 
-    triggerRealtimeSync('reels');
+    await triggerRealtimeSync('reels');
     res.json(reel);
 });
 
-app.post('/api/reels/:id/comment', (req, res) => {
+app.post('/api/reels/:id/comment', async (req, res) => {
     const reel = db.reels.find(r => r._id === req.params.id || r.id === req.params.id);
     if (!reel) return res.status(404).json({ error: 'Reel not found' });
 
     if (!reel.comments) reel.comments = [];
     reel.comments.push({ ...req.body, timestamp: Date.now() });
 
-    triggerRealtimeSync('reels');
+    await triggerRealtimeSync('reels');
     res.json(reel);
 });
 
@@ -418,7 +422,7 @@ app.get('/api/messages/:chatId', (req, res) => {
     res.json(messages);
 });
 
-app.post('/api/messages', (req, res) => {
+app.post('/api/messages', async (req, res) => {
     const newId = generateId();
     const msg = {
         _id: newId,
@@ -427,7 +431,7 @@ app.post('/api/messages', (req, res) => {
         ...req.body
     };
     db.messages.push(msg);
-    triggerRealtimeSync('messages');
+    await triggerRealtimeSync('messages');
     res.json(msg);
 });
 
@@ -439,7 +443,7 @@ app.get('/api/notifications/:userId', (req, res) => {
     res.json(notifs);
 });
 
-app.post('/api/notifications', (req, res) => {
+app.post('/api/notifications', async (req, res) => {
     const newId = generateId();
     const notif = {
         _id: newId,
@@ -449,15 +453,15 @@ app.post('/api/notifications', (req, res) => {
         ...req.body
     };
     db.notifications.unshift(notif);
-    triggerRealtimeSync('notifications');
+    await triggerRealtimeSync('notifications');
     res.json(notif);
 });
 
-app.put('/api/notifications/read/:userId', (req, res) => {
+app.put('/api/notifications/read/:userId', async (req, res) => {
     db.notifications.forEach(n => {
         if (n.to === req.params.userId) n.read = true;
     });
-    triggerRealtimeSync('notifications');
+    await triggerRealtimeSync('notifications');
     res.json({ success: true });
 });
 
@@ -470,7 +474,7 @@ app.use((req, res, next) => {
 // ─── START SERVER ────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
-    console.log(`⚡ Server running cleanly without MongoDB on port ${PORT}`);
+    console.log(`⚡ Server running cleanly on port ${PORT}`);
     gdrive.initGoogleDrive();
     triggerRealtimeSync();
 });
