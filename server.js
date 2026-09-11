@@ -507,12 +507,21 @@ async function seed() {
 
 const clientOptions = { serverApi: { version: '1', strict: true, deprecationErrors: true } };
 
-mongoose.connect(MONGODB_URI, clientOptions)
-    .then(async () => {
-        console.log('Pinged your deployment. You successfully connected to MongoDB Atlas!');
-        await seed();
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    if (MONGODB_URI) {
+        mongoose.connect(MONGODB_URI, clientOptions)
+            .then(async () => {
+                console.log('Successfully connected to MongoDB!');
+                await seed();
+                gdrive.initGoogleDrive();
+                triggerRealtimeSync();
+            })
+            .catch(err => console.error('Could not connect to MongoDB:', err.message));
+    } else {
+        console.warn('⚠️ MONGODB_URI not provided in environment variables.');
         gdrive.initGoogleDrive();
-        triggerRealtimeSync();
-        app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-    })
-    .catch(err => console.error('Could not connect to MongoDB Atlas', err));
+    }
+});
+
+module.exports = app;

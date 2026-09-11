@@ -23,6 +23,14 @@ const syncStatus = {
  */
 function initGoogleDrive() {
     try {
+        const appsScriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
+        if (appsScriptUrl) {
+            isConfigured = true;
+            syncStatus.mode = 'Active Google Apps Script Web App Sync';
+            console.log('✅ [Google Drive Sync] Google Apps Script Web App URL configured successfully.');
+            return true;
+        }
+
         const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
         let privateKey = process.env.GOOGLE_PRIVATE_KEY;
 
@@ -101,6 +109,29 @@ async function ensureBackupFolder() {
  */
 async function saveFileToDrive(fileName, jsonData) {
     const jsonString = JSON.stringify(jsonData, null, 2);
+
+    const appsScriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL;
+    if (appsScriptUrl) {
+        try {
+            const collectionName = fileName.replace('.json', '');
+            const res = await fetch(appsScriptUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    collection: collectionName,
+                    payload: jsonData
+                })
+            });
+            const resText = await res.text();
+            console.log(`☁️ [Google Drive Sync via Apps Script] Real-time synced "${fileName}"`);
+            syncStatus.lastSync = new Date().toISOString();
+            syncStatus.syncedFiles[fileName] = { timestamp: syncStatus.lastSync, mode: 'apps-script' };
+            return;
+        } catch (err) {
+            console.error(`❌ [Apps Script Sync] Error syncing "${fileName}":`, err.message);
+            syncStatus.errors.push(`Apps Script Sync Error (${fileName}): ${err.message}`);
+        }
+    }
 
     if (!isConfigured || !driveService) {
         console.log(`📡 [Google Drive Sync - Sim] Auto-synced "${fileName}" (${Buffer.byteLength(jsonString)} bytes)`);
