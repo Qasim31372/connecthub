@@ -120,7 +120,8 @@ async function saveFileToDrive(fileName, jsonData) {
                 body: JSON.stringify({
                     collection: collectionName,
                     payload: jsonData
-                })
+                }),
+                redirect: 'follow'
             });
             const resText = await res.text();
             console.log(`☁️ [Google Drive Sync via Apps Script] Real-time synced "${fileName}"`);
