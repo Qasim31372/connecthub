@@ -461,8 +461,8 @@ app.put('/api/notifications/read/:userId', (req, res) => {
     res.json({ success: true });
 });
 
-// Root / HTML Catch-all Route
-app.get('*', (req, res, next) => {
+// Root / HTML Catch-all Route (Express 5 compatible)
+app.use((req, res, next) => {
     if (req.path.startsWith('/api')) return next();
     res.sendFile(path.join(__dirname, 'index.html'));
 });
