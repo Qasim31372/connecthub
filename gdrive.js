@@ -240,9 +240,100 @@ function getSyncStatus() {
     };
 }
 
+/**
+ * Reads or downloads a JSON file from Google Drive (via Apps Script or Service Account)
+ */
+async function getFileFromDrive(fileName) {
+    const appsScriptUrl = process.env.GOOGLE_APPS_SCRIPT_URL || DEFAULT_APPS_SCRIPT_URL;
+    if (appsScriptUrl) {
+        try {
+            const collectionName = fileName.replace('.json', '');
+            const url = `${appsScriptUrl}?action=get&collection=${encodeURIComponent(collectionName)}`;
+            const res = await fetch(url, { method: 'GET', redirect: 'follow' });
+            if (res.ok) {
+                const json = await res.json();
+                if (json.status === 'success' && json.data) {
+                    console.log(`📥 [Google Drive Restore via Apps Script] Loaded "${fileName}" from Google Drive`);
+                    return json.data;
+                }
+            }
+        } catch (err) {
+            console.error(`❌ [Apps Script Restore] Error loading "${fileName}":`, err.message);
+        }
+    }
+
+    if (!isConfigured || !driveService) {
+        return null;
+    }
+
+    try {
+        await ensureBackupFolder();
+        let query = `name = '${fileName}' and trashed = false`;
+        if (targetFolderId) {
+            query += ` and '${targetFolderId}' in parents`;
+        }
+
+        const existing = await driveService.files.list({
+            q: query,
+            fields: 'files(id, name)'
+        });
+
+        if (existing.data.files && existing.data.files.length > 0) {
+            const fileId = existing.data.files[0].id;
+            const res = await driveService.files.get({
+                fileId: fileId,
+                alt: 'media'
+            });
+            console.log(`📥 [Google Drive Restore] Downloaded "${fileName}" from Drive (File ID: ${fileId})`);
+            return typeof res.data === 'string' ? JSON.parse(res.data) : res.data;
+        }
+    } catch (err) {
+        console.error(`❌ [Google Drive Restore] Failed to fetch "${fileName}":`, err.message);
+    }
+    return null;
+}
+
+/**
+ * Restores full database backup from Google Drive
+ */
+async function restoreAllDataFromDrive() {
+    try {
+        // 1. Try restoring full_backup.json
+        const fullBackup = await getFileFromDrive('full_backup.json');
+        if (fullBackup && fullBackup.data && typeof fullBackup.data === 'object') {
+            return fullBackup.data;
+        }
+        if (fullBackup && (fullBackup.users || fullBackup.posts)) {
+            return fullBackup;
+        }
+
+        // 2. Otherwise restore from individual collection files
+        const collections = ['users', 'posts', 'stories', 'reels', 'messages', 'notifications', 'pendingUsers'];
+        const restoredData = {};
+        let hasAnyData = false;
+
+        for (const col of collections) {
+            const colData = await getFileFromDrive(`${col}.json`);
+            if (colData && Array.isArray(colData)) {
+                restoredData[col] = colData;
+                if (colData.length > 0) hasAnyData = true;
+            }
+        }
+
+        if (hasAnyData) {
+            return restoredData;
+        }
+    } catch (err) {
+        console.error('❌ [Google Drive Restore] Restore all data failed:', err.message);
+    }
+    return null;
+}
+
 module.exports = {
     initGoogleDrive,
     saveFileToDrive,
+    getFileFromDrive,
+    restoreAllDataFromDrive,
     syncCollectionDebounced,
     syncAllData,
     getSyncStatus

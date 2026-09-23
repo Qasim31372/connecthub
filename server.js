@@ -153,6 +153,28 @@ app.post('/api/gdrive/sync', async (req, res) => {
     res.json(result);
 });
 
+app.post('/api/gdrive/restore', async (req, res) => {
+    try {
+        const restored = await gdrive.restoreAllDataFromDrive();
+        if (restored && (restored.users || restored.posts)) {
+            db = {
+                users: restored.users || [],
+                pendingUsers: restored.pendingUsers || [],
+                posts: restored.posts || [],
+                stories: restored.stories || [],
+                reels: restored.reels || [],
+                messages: restored.messages || [],
+                notifications: restored.notifications || []
+            };
+            saveLocalDB();
+            return res.json({ success: true, message: 'Database restored from Google Drive successfully', db });
+        }
+        res.status(404).json({ success: false, error: 'No backup found on Google Drive' });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
 // Auth
 app.post('/api/login', (req, res) => {
     const { username, password } = req.body;
@@ -473,10 +495,39 @@ app.use((req, res, next) => {
 
 // ─── START SERVER ────────────────────────────────────────────────────────────
 
-app.listen(PORT, () => {
-    console.log(`⚡ Server running cleanly on port ${PORT}`);
+async function initDatabase() {
     gdrive.initGoogleDrive();
-    triggerRealtimeSync();
+
+    console.log('🔄 Checking Google Drive for existing database backup...');
+    try {
+        const restored = await gdrive.restoreAllDataFromDrive();
+        if (restored && (restored.users?.length > 0 || restored.posts?.length > 0)) {
+            db = {
+                users: restored.users || [],
+                pendingUsers: restored.pendingUsers || [],
+                posts: restored.posts || [],
+                stories: restored.stories || [],
+                reels: restored.reels || [],
+                messages: restored.messages || [],
+                notifications: restored.notifications || []
+            };
+            saveLocalDB();
+            console.log(`✅ Successfully restored database from Google Drive! (${db.users.length} users, ${db.posts.length} posts loaded)`);
+            return;
+        }
+    } catch (err) {
+        console.error('⚠️ Could not restore from Google Drive on startup:', err.message);
+    }
+
+    console.log('ℹ️ No backup found on Google Drive or Drive empty. Preserving local db.json / seed data...');
+    db = loadLocalDB();
+    saveLocalDB();
+    await triggerRealtimeSync();
+}
+
+app.listen(PORT, async () => {
+    console.log(`⚡ Server running cleanly on port ${PORT}`);
+    await initDatabase();
 });
 
 module.exports = app;

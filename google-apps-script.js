@@ -35,8 +35,27 @@ function doPost(e) {
       folder = DriveApp.createFolder(folderName);
     }
 
+    if (action === 'get' || action === 'load' || action === 'restore') {
+      var fileName = collectionName.indexOf('.json') === -1 ? collectionName + '.json' : collectionName;
+      var files = folder.getFilesByName(fileName);
+      if (files.hasNext()) {
+        var file = files.next();
+        var content = file.getAs(MimeType.PLAIN_TEXT).getDataAsString();
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'success',
+          collection: collectionName,
+          data: JSON.parse(content)
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'not_found',
+          message: 'File ' + fileName + ' not found in Google Drive backup folder.'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     // Save JSON file in Google Drive
-    var fileName = collectionName + '.json';
+    var fileName = collectionName.indexOf('.json') === -1 ? collectionName + '.json' : collectionName;
     var jsonContent = JSON.stringify(payload, null, 2);
     var files = folder.getFilesByName(fileName);
 
@@ -62,9 +81,48 @@ function doPost(e) {
 }
 
 function doGet(e) {
-  return ContentService.createTextOutput(JSON.stringify({
-    status: 'online',
-    service: 'ConnectHub Google Drive Backup Service (Google Apps Script)',
-    timestamp: new Date().toISOString()
-  })).setMimeType(ContentService.MimeType.JSON);
+  try {
+    var params = (e && e.parameter) ? e.parameter : {};
+    var action = params.action || 'status';
+    var collectionName = params.collection || 'full_backup';
+
+    if (action === 'get' || action === 'load' || action === 'restore') {
+      var folderName = 'ConnectHub_Realtime_Backup';
+      var folders = DriveApp.getFoldersByName(folderName);
+      if (!folders.hasNext()) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'not_found',
+          message: 'Folder ConnectHub_Realtime_Backup not found on Google Drive'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      var folder = folders.next();
+      var fileName = collectionName.indexOf('.json') === -1 ? collectionName + '.json' : collectionName;
+      var files = folder.getFilesByName(fileName);
+      if (files.hasNext()) {
+        var file = files.next();
+        var content = file.getAs(MimeType.PLAIN_TEXT).getDataAsString();
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'success',
+          collection: collectionName,
+          data: JSON.parse(content)
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'not_found',
+          message: 'File ' + fileName + ' not found on Google Drive'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'online',
+      service: 'ConnectHub Google Drive Backup Service (Google Apps Script)',
+      timestamp: new Date().toISOString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
 }
